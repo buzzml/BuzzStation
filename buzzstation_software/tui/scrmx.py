@@ -89,11 +89,6 @@ class ScreenMatrix():
                 frame = ''
 
     def alter_con_out(self, y, x, string):
-        if (len(string) > (self._TUI_WIDTH - x)):
-            err_txt = "String length exceed row length from x to end."
-            err_txt += f"\nString length: {len(string)}, Space left from x to end: {self._TUI_WIDTH - x}"
-            raise ValueError(err_txt)
-
         y = self._TUI_HEIGHT - y + 1
         print('\033[A'*y, end='')
         print('\033[C'*x, end='')
@@ -104,7 +99,7 @@ class ScreenMatrix():
         else:
             print('\033[E'*y, end='', flush=True)
 
-    def clear_screen():
+    def clear_screen(self):
         print('\033[H', end='')
 
 

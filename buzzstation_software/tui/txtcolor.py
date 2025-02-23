@@ -1,6 +1,7 @@
 # Colors:
 FONT_PURPLE = "\033[38;5;93m"
 BG_BLUE = "\033[48;5;93m"
+BG_BLUE_DARKER = '\033[48;5;60m'
 RESET = "\033[0m"
 BG_GREEN = "\033[48;5;10m"
 BG_GREY = "\033[47m"
@@ -18,36 +19,41 @@ class TextColor():
     @staticmethod
     def color_bg(color, text):
         colored_string = ""
-        if color == "green":
-            colored_string = (f"{BG_GREEN}{FONT_BLACK}{text}{RESET}")
-        elif color == "blue":
-            colored_string = (f"{BG_BLUE}{text}{RESET}")
-        elif color == "grey":
-            colored_string = (f"{BG_GREY}{FONT_BLACK}{text}{RESET}")
-        elif color == "white":
-            colored_string = (f"{BG_WHITE}{FONT_BLACK}{text}{RESET}")
-        elif color == "black grey":
-            colored_string = (f"{BG_BLACK_GREY}{text}{RESET}")
-        elif color == "dark grey":
-            colored_string = (f"{BG_DARK_GREY}{text}{RESET}")
-        elif color == "light grey":
-            colored_string = (f"{BG_LIGHT_GREY}{text}{RESET}")
-        else: pass
+        match color:
+            case "green":
+                colored_string = (f"{BG_GREEN}{FONT_BLACK}{text}{RESET}")
+            case "blue":
+                colored_string = (f"{BG_BLUE}{text}{RESET}")
+            case "grey":
+                colored_string = (f"{BG_GREY}{FONT_BLACK}{text}{RESET}")
+            case "white":
+                colored_string = (f"{BG_WHITE}{FONT_BLACK}{text}{RESET}")
+            case "black grey":
+                colored_string = (f"{BG_BLACK_GREY}{text}{RESET}")
+            case "dark grey":
+                colored_string = (f"{BG_DARK_GREY}{text}{RESET}")
+            case "light grey":
+                colored_string = (f"{BG_LIGHT_GREY}{text}{RESET}")
+            case 'dark blue':
+                colored_string = (f"{BG_BLUE_DARKER}{text}{RESET}")
+            case _:
+                raise ValueError(f'No such color as "{color}" available in this method.')
         return colored_string
 
     @staticmethod
     def color_font(color, text):
         colored_string = ""
-        if color == "blue":
-            colored_string = (f"{FONT_BLUE}{text}{RESET}")
-        elif color == "purple":
-            colored_string = (f"{FONT_PURPLE}{text}{RESET}")
-        elif color == "black":
-            colored_string = (f"{FONT_BLACK}{text}{RESET}")
-        elif color == "yellow":
-            colored_string = (f"{FONT_YELLOW}{text}{RESET}")
-        elif color == "green":
-            colored_string = (f"{FONT_GREEN}{text}{RESET}")
+        match color:
+            case "blue":
+                colored_string = (f"{FONT_BLUE}{text}{RESET}")
+            case "purple":
+                colored_string = (f"{FONT_PURPLE}{text}{RESET}")
+            case "black":
+                colored_string = (f"{FONT_BLACK}{text}{RESET}")
+            case "yellow":
+                colored_string = (f"{FONT_YELLOW}{text}{RESET}")
+            case "green":
+                colored_string = (f"{FONT_GREEN}{text}{RESET}")
         return colored_string
 
     @classmethod
