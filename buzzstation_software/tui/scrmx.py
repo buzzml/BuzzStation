@@ -1,86 +1,116 @@
-from tui.txtcolor import text_bg_color
-from tui.txtcolor import text_font_color
+from txtcolor import TextColor
 import os
 
+'''
+This class is responsible for creating a character matrix, 17 lines * 64 characters, 
+as the basis for creating the Text User Interface.
+'''
+class ScreenMatrix():
+    def __init__(self, iskmscon=True):
+        self._TUI_HEIGHT = 17
+        self._TUI_WIDTH = 64
+        self._screen_matrix = self.create()
+        self._screen_matrix = self.fill_nones()
+        self._screen_matrix = self.bg_color()
+        self.iskmscon = iskmscon
 
-GUI_HEIGHT = 17
-GUI_WIDTH = 64
+    # append with 17 lists corresponding to 17 rows
+    def create(self):
+        self._screen_matrix = []
+        for i in range(self._TUI_HEIGHT):
+            self._screen_matrix.append([])
+        return self._screen_matrix
 
-# Create matrix 16 x 64 chars
-def create_screen_matrix():
-    screen_matrix = []
-    for i in range(GUI_HEIGHT):
-        screen_matrix.append([])
-    return screen_matrix
+    # append each column with 64 Nones corresponding to 64 characters per row
+    def fill_nones(self):
+        for i in range(self._TUI_HEIGHT):
+            for j in range(self._TUI_WIDTH):
+                self._screen_matrix[i].append(None)
+        return self._screen_matrix
 
-# Append matrix with spaces characters:
-def fill_matrix(screen_matrix):
-    for i in range(GUI_HEIGHT):
-        for j in range(GUI_WIDTH):
-            screen_matrix[i].append(' ')
-    return screen_matrix
+    # Fill screen matrix with color
+    def bg_color(self):
+        for y in range(len(self._screen_matrix)):
+            for x in range(len(self._screen_matrix[y])):
+                self._screen_matrix[y][x] = TextColor.color_bg('blue', ' ')
+        return self._screen_matrix
 
-# Fill screen matrix with color
-def bg_color(screen_matrix):
-    for y in range(len(screen_matrix)):
-        for x in range(len(screen_matrix[y])):
-            screen_matrix[y][x] = text_bg_color('blue' ,' ')
-    return screen_matrix
+    def draw_box(self):
+        # Draw box with space on top for text:
+        for y in range(len(self._screen_matrix)):
+            for x in range(len(self._screen_matrix[y])):
+                if x == 0 or x == len(self._screen_matrix[y]) - 1:
+                    self._screen_matrix[y][x] = TextColor.color_bg('blue', '┃')
+                    if y == 0 or y == len(self._screen_matrix) - 1:
+                        self._screen_matrix[y][x] = TextColor.color_bg('blue', ' ')
+                    if x == 0 and y == 1:
+                        self._screen_matrix[y][x] = TextColor.color_bg('blue', '┏')
+                    if x == len(self._screen_matrix[y]) - 1 and y == 1:
+                        self._screen_matrix[y][x] = TextColor.color_bg('blue', '┓')
+                    if x == 0 and y == len(self._screen_matrix) - 2:
+                        self._screen_matrix[y][x] = TextColor.color_bg('blue', '┗')
+                    if x == len(self._screen_matrix[y]) - 1 and y == len(self._screen_matrix) - 2:
+                        self._screen_matrix[y][x] = TextColor.color_bg('blue', '┛')
+                elif y == 1 or y == len(self._screen_matrix) - 2:
+                    self._screen_matrix[y][x] = TextColor.color_bg('blue', '━')
+                else:
+                    self._screen_matrix[y][x] = TextColor.color_bg('blue', ' ')
 
-def draw_box(screen_matrix):
-    # Draw box with space on top for text:
-    for y in range(len(screen_matrix)):
-        for x in range(len(screen_matrix[y])):
-            if x == 0 or x == len(screen_matrix[y]) - 1:
-                screen_matrix[y][x] = text_bg_color('blue', '┃')
-                if y == 0 or y == len(screen_matrix) - 1:
-                    screen_matrix[y][x] = text_bg_color('blue', ' ')
-                if x == 0 and y == 1:
-                    screen_matrix[y][x] = text_bg_color('blue', '┏')
-                if x == len(screen_matrix[y]) - 1 and y == 1:
-                    screen_matrix[y][x] = text_bg_color('blue', '┓')
-                if x == 0 and y == len(screen_matrix) - 2:
-                    screen_matrix[y][x] = text_bg_color('blue', '┗')
-                if x == len(screen_matrix[y]) - 1 and y == len(screen_matrix) - 2:
-                    screen_matrix[y][x] = text_bg_color('blue', '┛')
-            elif y == 1 or y == len(screen_matrix) - 2:
-                screen_matrix[y][x] = text_bg_color('blue', '━')
-            else:
-                screen_matrix[y][x] = text_bg_color('blue', ' ')
+    # Draw centered text at the bottom of the screen:
+    def draw_title(self, text):
+        width = len(self._screen_matrix[0])
+        start_print = (width - len(text)) / 2
+        start_print = int(start_print)
+        for i in range(len(text)):
+            self._screen_matrix[0][start_print+i] = self._screen_matrix[0][start_print+i].replace(' ', text[i])
 
-# Draw centered text at the bottom of the screen:
-def draw_title(screen_matrix, text):
-    width = len(screen_matrix[0])
-    start_print = (width - len(text)) / 2
-    start_print = int(start_print)
-    for i in range(len(text)):
-        screen_matrix[0][start_print+i] = screen_matrix[0][start_print+i].replace(' ', text[i])
+    #draw text on the bottom alligned to the left:
+    def draw_instr(self, info_text):
+        for i in range(len(info_text)):
+            self._screen_matrix[len(self._screen_matrix)-1][i+1] = self._screen_matrix[len(self._screen_matrix)-1][i+1].replace(' ', info_text[i])
 
-#draw text on the bottom alligned to the left:
-def draw_instr(screen_matrix, info_text):
-    for i in range(len(info_text)):
-        screen_matrix[len(screen_matrix)-1][i+1] = screen_matrix[len(screen_matrix)-1][i+1].replace(' ', info_text[i])
+    # create string from chars matrix (self._screen_matrix) and print it out
+    def print(self):
+        if self.iskmscon:
+            frame = ''
+            print('\033[H', end='')
+            for i in range(len(self._screen_matrix)):
+                for j in range(len(self._screen_matrix[0])):
+                    frame += self._screen_matrix[i][j]
+                frame = (15-i)*'\033[F' + '\033[K' + frame
+                print(frame, flush=True)
+                frame = ''
+        else:
+            frame = ''
+            for i in range(len(self._screen_matrix)):
+                for j in range(len(self._screen_matrix[0])):
+                    frame += self._screen_matrix[i][j]
+                print(frame)
+                frame = ''
 
-# create string from chars matrix (screen_matrix) and print it out
-def print_screen_matrix(screen_matrix, debug=False):
-    if not debug:
-        frame = ''
+    def alter_con_out(self, y, x, string):
+        if (len(string) > (self._TUI_WIDTH - x)):
+            err_txt = "String length exceed row length from x to end."
+            err_txt += f"\nString length: {len(string)}, Space left from x to end: {self._TUI_WIDTH - x}"
+            raise ValueError(err_txt)
+
+        y = self._TUI_HEIGHT - y + 1
+        print('\033[A'*y, end='')
+        print('\033[C'*x, end='')
+        print(string, end='')
+        if self.iskmscon:
+            print('\033[H', end='', flush=True)
+            print('\033[999B', end='', flush=True)
+        else:
+            print('\033[E'*y, end='', flush=True)
+
+    def clear_screen():
         print('\033[H', end='')
-        for i in range(len(screen_matrix)):
-            for j in range(len(screen_matrix[0])):
-                frame += screen_matrix[i][j]
-            frame = (15-i)*'\033[F' + '\033[K' + frame
-            print(frame, flush=True)
-            frame = ''
-    elif debug:
-        frame = ''
-        for i in range(len(screen_matrix)):
-            for j in range(len(screen_matrix[0])):
-                frame += screen_matrix[i][j]
-            print(frame)
-            frame = ''
 
 
-
-def clear_screen():
-    print('\033[H', end='')
+if __name__ == '__main__':
+    screen_matrix = ScreenMatrix(iskmscon=False)
+    screen_matrix.print()
+    screen_matrix.alter_con_out(0, 60, 'text')
+    import time
+    time.sleep(10)

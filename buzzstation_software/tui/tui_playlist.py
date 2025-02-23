@@ -1,262 +1,153 @@
-from .scrmx import create_screen_matrix
-from .scrmx import fill_matrix
-from .scrmx import print_screen_matrix
-from .tui_tracker import draw_frames_and_numbers
-from .tui_tracker import name_tracks
-from .tui_tracker import draw_bpm_vol_swing_values
-from .txtcolor import text_bg_color, text_font_color
-import os
-from core.song_data import SongData
+from scrmx import ScreenMatrix
+from txtcolor import TextColor
 
 
-clear_screen = lambda: os.system('clear')
-formatTextAsSelected = lambda text: text_bg_color('grey', text_font_color('black', text))
-
-#Create vertical lines for better visibility:
-def draw_vertical_lines(screen_matrix):
-    # screen's hight of 17 characters:
-    for y in range(17):
-        track_position = 2
-        # 8 tracks:
-        for i in range(8):
-            # 5 characters ength for track:
-            for j in range(5):
-                # each second i
-                if y % 2 == 1:
-                    screen_matrix[y][track_position + j] = text_bg_color('black grey', screen_matrix[y][track_position + j])
-            track_position += 6
-    return screen_matrix
-
-# Draw information that it is plalist:
-def draw_info_mode(screen_matrix):
-    # x is char on x axis, where the tracks ends, and the song info starts:
-    x = 2 + 6*8
-    info_text = ' [Playlist]' 
-    # Draw 'Song Name:' text
-    for i in range(64 - x):
-        if i <= len(info_text)-1:
-            screen_matrix[0][x + i] = text_bg_color('blue', info_text[i])
-    return screen_matrix
-
-# Draw info about selected instrument:
-def draw_info_instrument(screen_matrix, selected_instrument):
-    tui_width = 64
-    x = 2 + 6*8
-    text_line_1 = 'Inst. info:'
-    for i in range(len(text_line_1)):
-        screen_matrix[11][x + i + 1] = text_bg_color('blue', text_line_1[i])
-    
-    lines = []
-    if selected_instrument == 'Drums':
-        text_line_1 = ' Drums and'
-        text_line_2 = '  Samples'
-        lines = [text_line_1, text_line_2]
-    elif selected_instrument == 'Empty':
-        text_line_1 = '  [insert]'
-        text_line_2 = 'to add midi'
-        lines = [text_line_1, text_line_2]
-        
-    else:
-        text_line_1 = 'Midi Port: ' + selected_instrument[1]
-        text_line_2 = ' Channel: ' + selected_instrument[-1]
-        if len(selected_instrument) == 5:
-            text_line_2 = ' Channel ' + selected_instrument[-2:]
-        lines = [text_line_1, text_line_2]
-        
-    for i in range(len(lines)):
-        for j in range(len(lines[i])):
-            screen_matrix[12 + i][x + j + 1] = text_bg_color('blue', lines[i][j])
-    return screen_matrix
-
-def draw_patterns(
-                  screen_matrix, selected_pattern, playlist, 
-                  first_lvl_number, first_instr_number_to_display, 
-                  cursor, selection
-                 ):
-
-    # There can be just 8 from 16 instrument display on screen, so check, which 8 instrument will be displayed:
-    i_start = first_instr_number_to_display
-    i_end = first_instr_number_to_display + 8
-    # if there's less instrument than can be displayed, adjust range:
-    if i_end > len(playlist):
-        i_end = len(playlist)
+class TrackerLike(ScreenMatrix):
+    def __init__(self, iskmscon=True):
+        super().__init__(iskmscon)
+        self._played_number = None
+        self._first_number = 1
 
     '''
-    Patterns on playlist are displayed in chunks, patterns from 1 to 16, 17 to 32 etc.
-    First number is the first number in that chunk.
+    Create rows in different color than background, divided eachother
+    by line width column of background color.
+    This rows will be fields for tracker notes/pattern data.
+    Each second line is colored in differend shade of grey,
+    therefore the rows will not be confused with each other.
+    Rows are printed from 1 to 17, to leave screen row 0 for rows
+    titles.
     '''
-    first_lvl_number -= 1
-    j_start = first_lvl_number
-    j_end = first_lvl_number + 16
-
-    # Selction:
-    sel_start_xy = selection.get('sel_start_xy')
-    sel_end_xy = selection.get('sel_end_xy')
-    x = 2
-    for i in range(i_start, i_end):
-        for j in range(j_start, j_end):
-            if playlist[i][j] is not None:
-                playlist_element_to_print = ' ' + str(playlist[i][j])
-                pattern_number_length = len(str(playlist_element_to_print))
-                for k in range(pattern_number_length):
-                    # Print cursor, as grey background on pattern field:
-                    if cursor[0] == i and cursor[1] - 1 == j: # cursor on cursor[1]=0 is on instrument bar, so -1 to adjust it for list of patterns
-                        screen_matrix[j%16+1][x+k] = formatTextAsSelected(str(playlist_element_to_print)[k])
-                    # every second line is in other shade of grey, for better visibility:
-                    elif j % 2 == 0:
-                        screen_matrix[j%16+1][x+k] = text_bg_color('black grey', str(playlist_element_to_print)[k])
-                    # ditto:
+    def draw_tracks(self):
+        clrd_empty_chr1 = TextColor.color_bg('black grey', ' ')
+        clrd_empty_chr2 = TextColor.color_bg('dark grey', ' ')
+        ## 16 visible quarternotes/levels/rows:
+        for y in range(1, 17):
+            track_position = 3 #from each screen matrix column track printing will start
+            ## 8 tracks:
+            for i in range(8):
+                # 5 characters ength for track:
+                for j in range(5):
+                    # each second i
+                    if y % 2 == 1:
+                        self._screen_matrix[y][track_position+j] = clrd_empty_chr1
                     else:
-                        screen_matrix[j%16+1][x+k] = str(playlist_element_to_print)[k]
+                        self._screen_matrix[y][track_position+j] = clrd_empty_chr2
+                track_position += 6
+        return self._screen_matrix
 
-                    #print(cursor[0], i, cursor[0] != i)
-                    #print(cursor[1] - 1 , j, cursor[1] - 1 != j)
-                    # Mark selected patterns in green background:
-                    if(
-                        (
-                         (cursor[0] != i) 
-                         or (cursor[1] - 1 != j)
-                         )
-                        and (sel_start_xy is not None)
-                       ):
-                        if sel_end_xy is not None:
-                            if(
-                                (i >= sel_start_xy[0] and i <= sel_end_xy[0])
-                                and (j >= sel_start_xy[1] and j <= sel_end_xy[1])
-                              ):
-                                screen_matrix[j%16+1][x+k] = text_bg_color('green', str(playlist_element_to_print)[k])
-                        else:
-                            if sel_start_xy[0] == i and sel_start_xy[1] == j:
-                                screen_matrix[j%16+1][x+k] = text_bg_color('green', str(playlist_element_to_print)[k])
-
-
-        x += 6
-    return screen_matrix
-
-# Draw page of the instrument (as max 8 can be displayed on the screen, and there can be many more instrumnets applied), draw info about playing/pause
-def draw_page_and_playing(screen_matrix, page_number, is_playing):
-    x = 2 + 6*8
-    text_to_print = 'Page: ' + str(page_number)
-    
-    for i in range(len(text_to_print)):
-        screen_matrix[15][x+i+3] = text_bg_color('blue', text_to_print[i])
-    
-    if is_playing:
-        text_to_print = 'Playing'
-        z = 3
-    else:
-        text_to_print = 'Pause'
-        z = 4
-    
-    for i in range(len(text_to_print)):
-        screen_matrix[16][x+i+z] = text_bg_color('blue', text_to_print[i])
-    
-    return screen_matrix
-
-def draw_hw_name_n_vers(screen_matrix):
-    lines = ['BuzzStation', 'v1.0.0']
-    x_start = 50
-    space_for_str = 13
-    for i in range(len(lines)):
-        x_start_line = x_start + int(((space_for_str - len(lines[i]))) / 2)
-        for j in range(len(lines[i])):
-            one_char = lines[i][j]
-            one_char = f'\033[1m{one_char}\033[0m'
-            screen_matrix[5+i][x_start_line+j] = text_bg_color('blue', one_char)
-    return screen_matrix
-
-
-def draw_songname(screen_matrix, songname):
-    if songname == 'No songname':
-        songname = '  [Song not saved!]'
-    
-    tui_width = 64
-    x = 2 + 6*8
-    text_line_1 = 'Song name:'
-    for i in range(len(text_line_1)):
-        screen_matrix[11][x + i + 2] = text_bg_color('blue', text_line_1[i])
-    
-    lines = []
-    if len(songname) > 24:
-        lines.append(songname[:12])
-        lines.append(songname[12:23] + '…')
-    elif len(songname) > 12:
-        lines.append(songname[:12])
-        lines.append(songname[12:])
-    elif len(songname) <= 12:
-        lines.append(songname)
-
-    for i in range(len(lines)):
-        line_len = len(lines[i])
-        centered = int((13 - line_len) / 2)
-        for j in range(len(lines[i])):
-            screen_matrix[12+i][x+j+centered] = text_bg_color('blue', lines[i][j])
-    return screen_matrix
-
-def main(song_data, list_of_instruments, tui_cursor, playlist, selection, printtui=True):
-    bpm_value = song_data.get_data('bpm')
-    swing_value= song_data.get_data('swing')
-    vol_value = song_data.get_data('bvol')
-    is_playing = song_data.get_data('is_playing') 
-    songname = song_data.get_data('song_name')
-
-    if isinstance(tui_cursor, list):
-        tui_cursor = tui_cursor[:]
-        
-    page_number = int(tui_cursor[0]/8) + 1
-    first_instr_number_to_display = int(tui_cursor[0] / 8) * 8
-    list_of_instruments_to_display = list_of_instruments[first_instr_number_to_display: first_instr_number_to_display+8]
-    
     '''
-    Patterns on playlist are displayed in chunks, patterns from 1 to 16, 17 to 32 etc.
-    First number is the first number in that chunk. 
+    Convert quarter level number to 3 length string,
+    change it color background and, if needed, font color,
+    so for example number 1 can hide previous displayed
+    number 100.
     '''
-    first_lvl_number = (int(tui_cursor[1] / 16) * 16) + 1
-    if tui_cursor[1] % 16 == 0:
-        first_lvl_number -= 16
-    if tui_cursor[1] == 0:
-        first_lvl_number = 1
-    playlist_to_display = []
+    def adjust_qnumber_str(self, nbr):
+        nbr_str = str(nbr)
+        for i in range(3-len(nbr_str)):
+            nbr_str = ' ' + nbr_str
+        nbr_str = TextColor.color_bg('blue', nbr_str)
+        ## accent each four beat:
+        if (nbr % 4 == 0):
+            nbr_str = TextColor.color_font('black', nbr_str)
+        return nbr_str
 
-    for i in range(len(playlist)):
-        playlist_to_display.append(playlist[i][first_lvl_number-1: first_lvl_number -1 + 16])
-    playlist_to_display = playlist_to_display[first_instr_number_to_display: first_instr_number_to_display+8]
+    '''
+    This numbers will mark, with quarternote/track/row number 
+    is each row. 1, 5, 9 and 13 numbers font is black, to 
+    highligt them from rest.
+    '''    
+    def alter_numbers(self, first_number=1):
+        self._first_number = first_number
+        for i in range(16):
+            nbr = self.adjust_qnumber_str(first_number+i)
+            self.alter_con_out(y=2+i, x=0, string=nbr)
 
-    if tui_cursor[1] == 0:
-        selected_pattern = tui_cursor[0] % 8
-    else:
-        selected_pattern = None
-    
-    screen_matrix = create_screen_matrix()
-    screen_matrix = fill_matrix(screen_matrix)
-    screen_matrix = draw_frames_and_numbers(first_lvl_number, screen_matrix=screen_matrix)
-    screen_matrix = name_tracks(
-                                screen_matrix=screen_matrix, 
-                                list_of_samples=list_of_instruments_to_display, 
-                                selected=selected_pattern
-                                )
-    screen_matrix = draw_hw_name_n_vers(screen_matrix)
-    screen_matrix = draw_info_mode(screen_matrix)
-    screen_matrix = draw_bpm_vol_swing_values(screen_matrix, bpm_value, swing_value, vol_value)
-    if selected_pattern is not None:
-        screen_matrix = draw_info_instrument(screen_matrix, list_of_instruments_to_display[selected_pattern])
-    else:
-        screen_matrix = draw_songname(screen_matrix, songname)
-    screen_matrix = draw_vertical_lines(screen_matrix)
-    screen_matrix = draw_patterns(
-                                  screen_matrix, selected_pattern, playlist, 
-                                  first_lvl_number, first_instr_number_to_display, 
-                                  tui_cursor, selection
-                                  )
-    screen_matrix = draw_page_and_playing(screen_matrix, page_number, is_playing)
-    if printtui:
-        print_screen_matrix(screen_matrix)
-    else:
-        return screen_matrix
-    
+    def display_played_quarter(self, played_number):
+        ## alter lvl number with > sign, to show, which lvl is curenntly played:
+        if (self._first_number <= played_number <= self._first_number+16):
+            play_char = TextColor.color_bg('blue', '  >')
+            self.alter_con_out(y=1+played_number, x=0, string=play_char)
+            prev_played_nbr = self._played_number
+            ## alter previous > sign with quarter note number if needed:
+            if (
+                (prev_played_nbr is not None)
+                and (self._first_number <= prev_played_nbr <= self._first_number+16)
+                ):
+                nbr_str = self.adjust_qnumber_str(prev_played_nbr)
+                self.alter_con_out(y=1+prev_played_nbr, x=0, string=nbr_str)
+            self._played_number = played_number
+
+    def alter_track_names(self, track_names={}, page=1):
+        '''
+        8 tracks visible on screen, but more are available.
+        User by toggling pages, change displayed tracks on which he operates.
+        '''
+        for i in range(8):
+            track = i + (8 * (page-1))
+            if track in track_names:
+                name = columns[track]
+                for j in range(5 - len(name)):
+                    name + ' '
+            else:
+                name = 'Empty' 
+            name = TextColor.color_bg('blue', name)
+            self.alter_con_out(y=0, x=3+i*6, string=name)
+
+    def draw_pots_values(self, bpm, swing, vol):
+        # x is char on x axis, where the tracks ends, and the song info starts:
+        x = 3 + 6*8
+        info_text = 'BPM:    Swing:  bVOL:   '
+        for i in range(3):
+            value_to_print = 0
+            match i:
+                case 0: 
+                    value_to_print = bpm
+                case 1: 
+                    value_to_print = swing
+                case 2: 
+                    value_to_print = vol
+            # swing can varries between -50% and 50%:
+            if (i == 1):
+                if value_to_print < 0:
+                    sign = '-'
+                else:
+                    sign = ' '
+                value_to_print = str(abs(value_to_print))
+                how_many_fills = 2 - len(value_to_print)
+                value_to_print = sign + '0'*how_many_fills + value_to_print
+            else:
+                value_to_print = str(value_to_print)
+                how_many_fills = 3 - len(value_to_print)
+                value_to_print = '0'*how_many_fills + value_to_print
+
+            for j in range(11):
+                if (j < 8):
+                    self._screen_matrix[1+i][x+j] = info_text[:1]
+                    info_text = info_text[1:]
+                else:
+                    self._screen_matrix[1+i][x+j] = value_to_print[:1]
+                    value_to_print = value_to_print[1:]
+        return self._screen_matrix 
+
+    def put_tracker_data(cursor):
+        self.draw_tracks()
+        self.draw_numbers()
+
 if __name__ == '__main__':
-    # Tests
-    playlist = [[1, None, 2, None],[4000,400,32,134]]
-    selected_pattern = [1, 2]
-    main(list_of_instruments=['Drums', 'M1C1'], bpm_value=200, swing_value=50, vol_value=90, playlist=playlist, tui_cursor=[0, 3])
-    #cursor [instrument, quareternote]
+    import time
+    columns = {0: 'idk', 2: 'Drumz', 4:'MIDI'}
+    test_tracks = {1: {1: 120}, 3: {1: 666}}
+    test_track2 = {1: {1: ['C5', 'F'], 3: ['C#5', '4']}}
+    cursor = [1, 1]
+    tracker = TrackerLike(iskmscon=False)
+    tracker.draw_pots_values(180, -10, 100)
+    tracker.draw_tracks()
+    tracker.print()
+    tracker.alter_numbers()
+    tracker.alter_track_names(columns)
+    time.sleep(2)
+    tracker.display_played_quarter(1)
+    time.sleep(2)
+    tracker.display_played_quarter(2)
+    time.sleep(2)
+    tracker.alter_numbers()
