@@ -15,14 +15,17 @@ class SampleTracker(TrackerLike):
              qfirst_number=0,
              stripes=stripes
         )
+        self.print()
+        self.draw_numbers()
         self.draw_menu()
+        
 
-    def put_data(
+    def update_tui(
          self, bcursor=None, bpm=None, swing=None, vol=None,
-         tracks=None, isplaying=False, is_song_play=None,
-         info_text=None, tracker_data=None
+         tracks=None, isplaying=None, is_song_play=None,
+         info_text=None, tracker_data=None, pattern_number=None
     ):
-        super().put_data(  
+        super().update_tui(  
              bcursor=bcursor, 
              bpm=bpm, 
              swing=swing, 
@@ -36,12 +39,15 @@ class SampleTracker(TrackerLike):
         if tracker_data is not None:
             self.draw_tracker_data(tracker_data)
 
+        if pattern_number is not None:
+            self.draw_pattern(pattern_number)
+
     def draw_menu(self, selected=None, menu_y_str=7):
         ## Draw 'Menu:' Title:
-        string = TextColor.color_bg('blue', 'Menu:')
+        string = TextColor.color_bg(self.bg_clr, 'Menu:')
         self.alter_con_out(y=menu_y_str, x=55, string=string)
         ## Draw toggling pattern buttons:
-        string = TextColor.color_bg('blue', 'pattern:')
+        string = TextColor.color_bg(self.bg_clr, 'pattern:')
         self.alter_con_out(y=menu_y_str+1, x=51, string=string)
         butt1 = '⇽'
         if selected == 'prev':
@@ -49,7 +55,7 @@ class SampleTracker(TrackerLike):
         butt2 = '⇾'
         if selected == 'next':
             butt2 = TextColor.selected_text(butt2)
-        space = TextColor.color_bg('blue', ' ')
+        space = TextColor.color_bg(self.bg_clr, ' ')
         string = butt1 + space + butt2
         self.alter_con_out(y=menu_y_str+1, x=60, string=string)
         ## Clone pattern button:
@@ -61,6 +67,11 @@ class SampleTracker(TrackerLike):
         if selected == 'clear':
             string = TextColor.selected_text(string)
         self.alter_con_out(y=menu_y_str+3, x=53, string=string)
+
+    def draw_pattern(self, pattern):
+        string = f'Pattern: {pattern}'
+        string = TextColor.color_bg(self.bg_clr, string)
+        self.alter_con_out(y=2, x=52, string=string)
 
     ## Draw sample notes and volumes on tracks:
     def draw_tracker_data(self, tracker_data):
@@ -91,11 +102,13 @@ class SampleTracker(TrackerLike):
 
 if __name__ == '__main__':
     stracker = SampleTracker(smpls_playltrack=1, iskmscon=False)
-    stracker.put_data(bcursor=[8, 8], tracks={}, info_text=('Sample name:', 60*'x'+'1'))
+    stracker.update_tui(bcursor=[8, 8], tracks={}, info_text=('Sample name:', 60*'x'+'1'))
     tracker_data = {
                     0:{1: ['C5', 'F'], 3: ['C5', 'B']},
                     2:{1: ['A#5', '1']},
                     8: {1: ['TT', 'F'], 3: ['ST', 'B']},
                     }
-    stracker.put_data(tracker_data=tracker_data)
+    stracker.update_tui(tracker_data=tracker_data)
+    stracker.update_tui(isplaying=True, is_song_play=False)
+    stracker.update_tui(pattern_number=1)
     #stracker.update_track_field(track=1, lvl=2, val='1234')

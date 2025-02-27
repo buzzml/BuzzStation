@@ -10,11 +10,8 @@ class TrackerLike(ScreenMatrix):
         self.bg_tracks(stripes)
         self.bg_pots()
         self.bg_title(mode_title)
-        self.print()
         self._played_number = None
         self._qfirst_number = qfirst_number #first number of curenntly displayed lvl/quarter note
-        if qfirst_number is not None:
-            self.draw_numbers()
         self._page_number = None
         # For erasing cursor from it's previous position:
         self._prev_selected = None #[y, x, data]
@@ -52,7 +49,7 @@ class TrackerLike(ScreenMatrix):
 
     def bg_pots(self):
         x = 3 + 6*8
-        to_print = ['BPM', 'Swing', 'bVOL']
+        to_print = ['BPM:', 'Swing:', 'bVOL:']
         for i in range(len(to_print)):
             for j in range(12-len(to_print[i])):
                 to_print[i] += ' '
@@ -108,7 +105,7 @@ class TrackerLike(ScreenMatrix):
         nbr_str = str(nbr)
         while (len(nbr_str) < 3):
             nbr_str = ' ' + nbr_str
-        nbr_str = TextColor.color_bg('blue', nbr_str)
+        nbr_str = TextColor.color_bg(self.bg_clr, nbr_str)
         ## accent each beat:
         if (
             ((not self._triplets) and (nbr % 4 == 1)
@@ -117,7 +114,7 @@ class TrackerLike(ScreenMatrix):
             nbr_str = TextColor.color_font('black', nbr_str)
         return nbr_str
 
-    def calc_first_nbr(self):
+    def calc_first_nbr(self, bcur_y):
         if( 
            (self._qfirst_number is None)
            or (not self._qfirst_number <= bcur_y <= self._qfirst_number+16)
@@ -164,7 +161,7 @@ class TrackerLike(ScreenMatrix):
 
     def draw_page_nbr(self):
         page_str = f' Page: {self._page_number}  '
-        page_str = TextColor.color_bg('blue', page_str)
+        page_str = TextColor.color_bg(self.bg_clr, page_str)
         if self._triplets:
             self.alter_con_out(y=12, x=52, string=page_str)
         else:
@@ -176,15 +173,15 @@ class TrackerLike(ScreenMatrix):
         if (
             (played_number is not None)
             and (self._qfirst_number <= played_number <= self._qfirst_number+16)
-            ):
-            play_char = TextColor.color_bg('blue', '  >')
+        ):
+            play_char = TextColor.color_bg(self.bg_clr, '  >')
             self.alter_con_out(y=1+played_number, x=0, string=play_char)
             self._played_number = played_number
         ## alter previous > sign with quarter note number if needed:
         if (
             (prev_played_nbr is not None)
             and (self._qfirst_number <= prev_played_nbr <= self._qfirst_number+16)
-            ):
+        ):
             nbr_str = self.adjust_qnumber_str(prev_played_nbr)
             self.alter_con_out(y=1+prev_played_nbr, x=0, string=nbr_str)
 
@@ -200,7 +197,7 @@ class TrackerLike(ScreenMatrix):
                 name += ' ' * (5 - len(name))
             else:
                 name = 'Empty' 
-            name = TextColor.color_bg('blue', name)
+            name = TextColor.color_bg(self.bg_clr, name)
             self.alter_con_out(y=1, x=3+i*6, string=name)
 
     def draw_pots_values(self, bpm=None, swing=None, vol=None, y_start=3):
@@ -266,13 +263,13 @@ class TrackerLike(ScreenMatrix):
             new_info_text[2] = new_info_text[2][max_line_size:(max_line_size * 2) - 1] + ellipsis
         for i in range(len(new_info_text)):
             new_info_text[i] = adjust_string(new_info_text[i])
-            new_info_text[i] = TextColor.color_bg('blue', new_info_text[i])
+            new_info_text[i] = TextColor.color_bg(self.bg_clr, new_info_text[i])
             self.alter_con_out(y=y+i, x=x, string=new_info_text[i])
 
 
-    def put_data(
+    def update_tui(
          self, bcursor=None, bpm=None, swing=None, vol=None,
-         tracks=None, isplaying=False, is_song_play=None,
+         tracks=None, isplaying=None, is_song_play=None,
          info_text=None
     ):
         ## Update page number:
@@ -291,7 +288,8 @@ class TrackerLike(ScreenMatrix):
                 self.draw_pots_values(pot_val)
 
         ## Update if it's playing or paused:
-        self.draw_isplaying(isplaying, is_song_play)
+        if ((isplaying is not None) and (is_song_play is not None)):
+            self.draw_isplaying(isplaying, is_song_play)
 
         if info_text is not None:
             self.draw_info_text(info_text)
@@ -305,11 +303,14 @@ if __name__ == '__main__':
     test_tracks = {1: {1: 120}, 3: {1: 666}}
     test_track2 = {1: {1: ['C5', 'F'], 3: ['C#5', '4']}}
     tracker = TrackerLike(mode_title='PLAYLIST',iskmscon=False, qfirst_number=0)
+    tracker.print()
+    tracker.draw_numbers()
     tracker.draw_pots_values(180, -10, 100)
-    tracker.put_data(bcursor=[1, 7], tracks=columns, isplaying=True, is_song_play=False)
+    tracker.update_tui(bcursor=[1, 7], tracks=columns, isplaying=True, is_song_play=False)
     tracker.update_track_field(1, 0, '12345')
     tracker.update_track_field(1, 1, 'AAAAA')
     tracker.update_track_field(2, 0, 'BB', True)
+    tracker.draw_box(x=2, y=2, x_siz=10, y_siz=10, warning_box=True)
     time.sleep(2)
     tracker.draw_played_quarter(16)
     time.sleep(2)

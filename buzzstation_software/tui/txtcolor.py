@@ -1,8 +1,7 @@
 # Colors:
-FONT_PURPLE = "\033[38;5;93m"
+RESET = "\033[0m"
 BG_BLUE = "\033[48;5;93m"
 BG_BLUE_DARKER = '\033[48;5;60m'
-RESET = "\033[0m"
 BG_GREEN = "\033[48;5;10m"
 BG_GREY = "\033[47m"
 BG_WHITE = "\033[48;5;15m"
@@ -13,6 +12,12 @@ FONT_BLACK = "\033[30m"
 FONT_BLUE = "\033[38;5;93m"
 FONT_YELLOW = "\033[38;5;226m"
 FONT_GREEN = "\033[38;5;10m"
+CURSOR = "\033[60;5;10m"
+CURSOR1 = "\033[30;5;107m"
+BG_BLUE_LIGHT = "\033[30;1;104m"
+BG_SEL_BLUE = "\033[44;10;1m"
+#BG_TEST_BLUE = "\033[43;5;93m"
+
 
 # Change char's background color:
 class TextColor():
@@ -36,6 +41,12 @@ class TextColor():
                 colored_string = (f"{BG_LIGHT_GREY}{text}{RESET}")
             case 'dark blue':
                 colored_string = (f"{BG_BLUE_DARKER}{text}{RESET}")
+            case 'sel blue':
+                colored_string = (f"{BG_SEL_BLUE}{text}{RESET}")
+            case 'light blue':
+                colored_string = (f"{BG_BLUE_LIGHT}{text}{RESET}")
+            case None:
+                return text
             case _:
                 raise ValueError(f'No such color as "{color}" available in this method.')
         return colored_string
@@ -46,18 +57,22 @@ class TextColor():
         match color:
             case "blue":
                 colored_string = (f"{FONT_BLUE}{text}{RESET}")
-            case "purple":
-                colored_string = (f"{FONT_PURPLE}{text}{RESET}")
             case "black":
                 colored_string = (f"{FONT_BLACK}{text}{RESET}")
             case "yellow":
                 colored_string = (f"{FONT_YELLOW}{text}{RESET}")
             case "green":
                 colored_string = (f"{FONT_GREEN}{text}{RESET}")
+            case None:
+                return text
         return colored_string
 
     @classmethod
-    def selected_text(cls, text):
-        text = cls.color_font('black', text)
-        text = cls.color_bg('grey', text)
+    def selected_text(cls, text, bg_color='grey', font_color='black'):
+        text = cls.color_font(font_color, text)
+        text = cls.color_bg(bg_color, text)
+        return text
+
+    def blinking(text, whitebg=True):
+        text = (f"{CURSOR}{text}{RESET}")
         return text
